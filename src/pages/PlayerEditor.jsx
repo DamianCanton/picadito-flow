@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Trash2, Plus, Play, User } from 'lucide-react';
 import useAppStore from '../store';
-
-const POSITIONS = ['ARQ', 'DEF', 'MED', 'DEL', 'POLI'];
+import { POSITIONS_LIST } from '../utils/constants';
 
 export default function PlayerEditor() {
     const { activePlayers, addPlayer, removePlayer, updatePlayer, createMatches } = useAppStore();
@@ -62,7 +61,7 @@ export default function PlayerEditor() {
                                 value={player.position}
                                 onChange={(e) => updatePlayer(player.id, 'position', e.target.value)}
                             >
-                                {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+                                {POSITIONS_LIST.map(pos => <option key={pos} value={pos}>{pos}</option>)}
                             </select>
 
                             <button
