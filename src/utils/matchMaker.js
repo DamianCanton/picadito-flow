@@ -50,47 +50,51 @@ export const generateMatches = (players) => {
         const teamA = [];
         const teamB = [];
 
-        // Distribute Specifics Round-Robin
+        // Dynamic calculation of remaining matches
+        const currentTotalPlayers = getTotalCount(pools);
+        const matchesRemaining = Math.floor(currentTotalPlayers / PLAYERS_PER_MATCH);
+
+        // Distribute Specifics Round-Robin with QUOTA
         SPECIFIC_ROLES.forEach(role => {
             const rolePool = pools[role];
+
+            // Calculate Quota for THIS match: Math.ceil(available / matchesRemaining)
+            // e.g., 4 ARQs, 2 Matches left -> take 2.
+            // e.g., 5 ARQs, 2 Matches left -> take 3 for first, leaving 2 for second.
+            // Ensures we don't consume everyone in the first match.
+            const maxForThisMatch = Math.ceil(rolePool.length / matchesRemaining);
+            let assignedCount = 0;
+
             let assignToA = Math.random() < 0.5; // Random start for fairness
 
-            // While we have players of this role and space in teams
-            // We use a safe loop to extract valid players for this match
-            // We don't want to drain the pool if teams are full, but teams shouldn't be full yet
-
-            // Extract all players of this role into a temp buffer for this match? 
-            // No, grab them one by one until teams full or role empty
-
-            // We iterate backwards/or just shift. Since we shuffled, shift is fine.
-            let i = 0;
-            while (rolePool.length > 0) {
+            // Distribute up to quota
+            while (rolePool.length > 0 && assignedCount < maxForThisMatch) {
                 // If both teams full, stop distributing this role (defer to next match)
                 if (teamA.length >= PLAYERS_PER_TEAM && teamB.length >= PLAYERS_PER_TEAM) break;
 
-                const player = rolePool[0]; // Peek
-
+                let assigned = false;
                 if (assignToA) {
                     if (teamA.length < PLAYERS_PER_TEAM) {
                         teamA.push(rolePool.shift());
-                        assignToA = !assignToA; // Switch
+                        assignToA = !assignToA;
+                        assigned = true;
                     } else if (teamB.length < PLAYERS_PER_TEAM) {
                         teamB.push(rolePool.shift());
-                        // Don't switch (forced to B)
-                    } else {
-                        // Should be caught by top check
-                        break;
+                        assigned = true;
                     }
                 } else {
                     if (teamB.length < PLAYERS_PER_TEAM) {
                         teamB.push(rolePool.shift());
                         assignToA = !assignToA;
+                        assigned = true;
                     } else if (teamA.length < PLAYERS_PER_TEAM) {
                         teamA.push(rolePool.shift());
-                    } else {
-                        break;
+                        assigned = true;
                     }
                 }
+
+                if (assigned) assignedCount++;
+                else break;
             }
         });
 
@@ -116,14 +120,7 @@ export const generateMatches = (players) => {
             }
         }
 
-        // Final check: If we ran out of POLI but still have SPECIFIC left in future matches?
-        // The outer while loop ensures TOTAL count >= 22. 
-        // If we drained POLI but teams are not full, we must grab from other specific pools if available?
-        // This is an edge case: "More than 22 players, but breakdown is weird".
-        // e.g. 50 players. 40 ARQs. 
-        // Loop 1 ARQs distributed.
-        // If we have remaining holes, we should fill with ANYONE.
-        // Helper function to fill from any remaining pool if teams not full:
+        // Final check: fallback if pools drained but teams not full (edge case)
         fillTeamsWithAnyRemaining(teamA, teamB, pools, PLAYERS_PER_TEAM);
 
         // Assign formations
